@@ -50,8 +50,9 @@
     <StartupObject>nullbot.Client</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="smartirc">
-      <HintPath>..\..\smartirc\smartirc\bin\Release\smartirc.dll</HintPath>
+    <Reference Include="smartirc, Version=0.4.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\smartirc.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
