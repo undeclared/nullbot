@@ -31,6 +31,7 @@ namespace nullbot.Modules
             client = Client.getInstance();
             random = new Random();
             timer = new Timer(GAME_LENGTH_MINUTES * 60 * 1000);
+            timer.Elapsed += gameOver;
             proposedAcronyms = new Dictionary<string, AcronymProposal>();
             client.OnQueryMessage += client_OnQueryMessage;
             client.OnChannelMessage += client_OnChannelMessage;
@@ -60,7 +61,6 @@ namespace nullbot.Modules
             client.SendMessage(SendType.Message, "#cooking", "New acronym: " + currentAcronym + ". Message me with a proposed meaning (one per game). Results in " + GAME_LENGTH_MINUTES + " minute(s).");
             active = true;
             startTime = DateTime.Now;
-            timer.Elapsed += gameOver;
             timer.Start();
         }
 
@@ -172,6 +172,7 @@ namespace nullbot.Modules
                         acronymProposal = proposedAcronyms[nick];
                         acronymProposal.timeSpanString = timeString;
                         acronymProposal.acronym = message;
+                        proposedAcronyms[nick] = acronymProposal;
                     }
                     else
                     {
