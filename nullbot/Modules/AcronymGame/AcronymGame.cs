@@ -30,7 +30,7 @@ namespace nullbot.Modules
             sentOneWarning = false;
             client = Client.getInstance();
             random = new Random();
-            timer = new Timer();
+            timer = new Timer(GAME_LENGTH_MINUTES * 60 * 1000);
             proposedAcronyms = new Dictionary<string, AcronymProposal>();
             client.OnQueryMessage += client_OnQueryMessage;
             client.OnChannelMessage += client_OnChannelMessage;
@@ -60,7 +60,6 @@ namespace nullbot.Modules
             client.SendMessage(SendType.Message, "#cooking", "New acronym: " + currentAcronym + ". Message me with a proposed meaning (one per game). Results in " + GAME_LENGTH_MINUTES + " minute(s).");
             active = true;
             startTime = DateTime.Now;
-            timer.Interval = GAME_LENGTH_MINUTES * 60 * 1000;
             timer.Elapsed += gameOver;
             timer.Start();
         }
@@ -166,14 +165,23 @@ namespace nullbot.Modules
                     
                     if (timeSpan.Minutes > 0)
                         timeString = timeSpan.Minutes.ToString() + " minute " + timeString;
-
-                    AcronymProposal acronymProposal = new AcronymProposal();
-                    acronymProposal.nickname = nick;
-                    acronymProposal.timeSpanString = timeString;
-                    acronymProposal.acronym = message;
-                    acronymProposal.index = AcronymProposal.lastIndex++;
-                    // No errors! time to add the string. Replaces if an old one already exists.
-                    proposedAcronyms[nick] = acronymProposal;
+                    
+                    AcronymProposal acronymProposal;
+                    if (proposedAcronyms.ContainsKey(nick))
+                    {
+                        acronymProposal = proposedAcronyms[nick];
+                        acronymProposal.timeSpanString = timeString;
+                        acronymProposal.acronym = message;
+                    }
+                    else
+                    {
+                        acronymProposal = new AcronymProposal();
+                        acronymProposal.nickname = nick;
+                        acronymProposal.timeSpanString = timeString;
+                        acronymProposal.acronym = message;
+                        acronymProposal.index = AcronymProposal.lastIndex++;
+                        proposedAcronyms[nick] = acronymProposal;
+                    }
                 }
             }
         }
