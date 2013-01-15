@@ -11,6 +11,9 @@ namespace nullbot
     [Serializable]
     class Globals
     {
+        public List<string> IgnoredUsers;
+        public Dictionary<string, int> lifetimePoints;
+
         private static Globals instance;
 
         public static Globals getInstance()
@@ -27,6 +30,7 @@ namespace nullbot
                 {
                     instance = new Globals();
                     instance.IgnoredUsers = new List<string>();
+                    instance.lifetimePoints = new Dictionary<string, int>();
                 }
             }
 
@@ -39,7 +43,5 @@ namespace nullbot
             StreamWriter file = new StreamWriter(@"globals.xml");
             serializer.Serialize(file, this);
         }
-
-        public List<string> IgnoredUsers;
     }
 }

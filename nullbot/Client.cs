@@ -30,16 +30,11 @@ namespace nullbot
 
             instance.OnConnected += clientInstance_OnConnected;
             instance.OnRegistered += clientInstance_OnRegistered;
-            instance.OnRawMessage += instance_OnRawMessage;
             
             instance.Connect(Server, Port);
    
         }
 
-        void instance_OnRawMessage(object sender, IrcEventArgs e)
-        {
-            Console.WriteLine(e.Data.RawMessage);
-        }
 
         void clientInstance_OnRegistered(object sender, EventArgs e)
         {
