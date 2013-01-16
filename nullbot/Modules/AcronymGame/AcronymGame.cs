@@ -68,9 +68,18 @@ namespace nullbot.Modules
                 if (commands.Length == 2)
                 {
                     bool isNum = Int32.TryParse(commands[1], out minLength);
-                    
+
                     if (isNum)
-                        maxLength = minLength;
+                    {
+                        if (minLength < 4)
+                        {
+                            minLength = MIN_LENGTH_DEFAULT;
+                            client.SendMessage(SendType.Message, "#cooking", "Invalid length specified. Must be at least 4.");
+                            return;
+                        }
+                        else
+                            maxLength = minLength;
+                    }
                 }
                 else
                 {
@@ -102,21 +111,34 @@ namespace nullbot.Modules
                 return;
             }
 
-            client.SendMessage(SendType.Message, "#cooking", "Acronym: " + currentAcronym + ". Time is up! Listing the proposed meanings.");
-
-            for(int index = 0; index < proposedAcronyms.Count; index++)
+            else if (proposedAcronyms.Count == 1)
             {
-                AcronymProposal acronymProposal = proposedAcronyms[index];
-
-                string finalString = "Vote !" + (index+1) + " " + acronymProposal.acronym + " [" + acronymProposal.timeSpanString + "]";
-                client.SendMessage(SendType.Message, "#cooking", finalString);
+                client.SendMessage(SendType.Message, "#cooking", "Acronym: " + currentAcronym + ". Time is up! Listing the proposed meanings.");
+                client.SendMessage(SendType.Message, "#cooking", "(" + proposedAcronyms[0].nickname + ") " + proposedAcronyms[0].acronym + " [" + proposedAcronyms[0].timeSpanString + "]");
+                client.SendMessage(SendType.Message, "#cooking", "Thanks for playing. No voting is available if only one entry is here.");
+                
+                votingTime = false;
+                proposedAcronyms.Clear();
+                peopleWhoVotedAndForWho.Clear();
+                voteTotals.Clear();
             }
+            else
+            {
+                client.SendMessage(SendType.Message, "#cooking", "Acronym: " + currentAcronym + ". Time is up! Listing the proposed meanings.");
+                for(int index = 0; index < proposedAcronyms.Count; index++)
+                {
+                    AcronymProposal acronymProposal = proposedAcronyms[index];
 
-            client.SendMessage(SendType.Message, "#cooking", "Listing over. Time to vote!");
-            client.SendMessage(SendType.Message, "#cooking", "Vote by saying the trigger !x as seen above.");
+                    string finalString = "Vote !" + (index+1) + " " + acronymProposal.acronym + " [" + acronymProposal.timeSpanString + "]";
+                    client.SendMessage(SendType.Message, "#cooking", finalString);
+                }
 
-            votingTime = true;
-            voteTimer.Start();
+                client.SendMessage(SendType.Message, "#cooking", "Listing over. Time to vote!");
+                client.SendMessage(SendType.Message, "#cooking", "Message me !x to vote for which number.");
+
+                votingTime = true;
+                voteTimer.Start();
+            }
         }
 
         void endGame(object sender, ElapsedEventArgs e)
@@ -127,7 +149,7 @@ namespace nullbot.Modules
             Globals globals = Globals.getInstance();
             KeyValuePair<string, int> winner = new KeyValuePair<string,int>(String.Empty, -1);
             string totalsString = String.Empty;
-            List<KeyValuePair<string, int>> ties = new List<KeyValuePair<string, int>>();
+            List<string> ties = new List<string>();
             foreach (KeyValuePair<string, int> vote in voteTotals)
             {
                 string nick = vote.Key;
@@ -149,12 +171,12 @@ namespace nullbot.Modules
 
                         else if (vote.Value == winner.Value)
                         {
-                            ties.Add(vote);
+                            ties.Add(vote.Key);
                             Console.WriteLine("Tie added, between last winner and this vote");
-                            Console.WriteLine("Tied for score: " + ties[0].Value);
-                            foreach (KeyValuePair<string, int> tie in ties)
+                            Console.WriteLine("Tied for score: " + winner.Value);
+                            foreach (string tie in ties)
                             {
-                                Console.WriteLine("Tie name: " + tie.Key);
+                                Console.WriteLine("Tie name: " + tie);
                             }
                             Console.WriteLine("Total ties: " + ties.Count);
                         }
@@ -181,17 +203,7 @@ namespace nullbot.Modules
             {
                 string tieString = "A tie between: ";
 
-                for (int index = 0; index < ties.Count; index++)
-                {
-                    tieString += ties[index].Key;
-
-                    if (index == (ties.Count - 2))
-                        tieString += " and ";
-                    else
-                        tieString += ", ";
-                }
-
-                tieString += ".  [" + ties[0].Value + " votes]";
+                tieString += String.Join(", ", ties);
 
                 client.SendMessage(SendType.Message, "#cooking", tieString);
             }
