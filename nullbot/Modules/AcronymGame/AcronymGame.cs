@@ -12,10 +12,11 @@ namespace nullbot.Modules
     {
         private const int MIN_LENGTH_DEFAULT = 5;
         private const int MAX_LENGTH_DEFAULT = 8;
-        private const byte GAME_LENGTH_MINUTES = 2;
-        private const byte VOTE_LENGTH_MINUTES = 1;
+        private const double GAME_LENGTH_MINUTES = 0.5;
+        private const double VOTE_LENGTH_MINUTES = 0.5;
         private const string LETTERS = "abcdefghijklmnoprstuvwy";
-        
+
+        private bool customAcronym;
         private bool gameTime;
         private bool votingTime;
         private IrcClient client;
@@ -33,7 +34,8 @@ namespace nullbot.Modules
         public AcronymGame() : base("Acronym Game")
         {
             gameTime = false;
-            votingTime = false; 
+            votingTime = false;
+            customAcronym = false;
             client = Client.getInstance();
             random = new Random();
             gameTimer = new Timer(GAME_LENGTH_MINUTES * 60 * 1000);
@@ -61,7 +63,7 @@ namespace nullbot.Modules
                 !gameTime &&
                 !votingTime)
             {
-                TimeSpan sinceLastGame = DateTime.Now.Subtract(startTime);
+                customAcronym = false;
 
                 string[] commands = message.Split(' ');
 
@@ -80,6 +82,23 @@ namespace nullbot.Modules
                         else
                             maxLength = minLength;
                     }
+                    else
+                    {
+                        if (commands[1] != String.Empty)
+                        {
+
+                            customAcronym = true;
+                            foreach (char ch in commands[1])
+                            {
+                                if (!Char.IsLetter(ch))
+                                {
+                                    customAcronym = false;
+                                    break;
+                                }
+                            }
+                            currentAcronym = commands[1];
+                        }
+                    }
                 }
                 else
                 {
@@ -94,7 +113,7 @@ namespace nullbot.Modules
         private void newGame()
         {
             generateNewAcronym();
-            client.SendMessage(SendType.Message, "#cooking", "New acronym: " + currentAcronym + ". Message me with a proposed meaning (one per game). Results in " + GAME_LENGTH_MINUTES + " minute(s).");
+            client.SendMessage(SendType.Message, "#cooking", "New acronym: " + currentAcronym + ". /msg " + client.Nickname + " [acronym]. Results voted on in 30 seconds if 2+ entries.");
             Console.WriteLine("Generated new acronym: " + currentAcronym);
             gameTime = true;
             startTime = DateTime.Now;
@@ -115,7 +134,7 @@ namespace nullbot.Modules
             {
                 client.SendMessage(SendType.Message, "#cooking", "Acronym: " + currentAcronym + ". Time is up! Listing the proposed meanings.");
                 client.SendMessage(SendType.Message, "#cooking", "(" + proposedAcronyms[0].nickname + ") " + proposedAcronyms[0].acronym + " [" + proposedAcronyms[0].timeSpanString + "]");
-                client.SendMessage(SendType.Message, "#cooking", "Thanks for playing. No voting is available if only one entry is here.");
+                client.SendMessage(SendType.Message, "#cooking", "Thanks for playing. No voting is available due to only one entry.");
                 
                 votingTime = false;
                 proposedAcronyms.Clear();
@@ -134,7 +153,7 @@ namespace nullbot.Modules
                 }
 
                 client.SendMessage(SendType.Message, "#cooking", "Listing over. Time to vote!");
-                client.SendMessage(SendType.Message, "#cooking", "Message me !x to vote for which number.");
+                client.SendMessage(SendType.Message, "#cooking", "/msg " + client.Nickname + " !x to vote for which number.");
 
                 votingTime = true;
                 voteTimer.Start();
@@ -150,30 +169,31 @@ namespace nullbot.Modules
             KeyValuePair<string, int> winner = new KeyValuePair<string,int>(String.Empty, -1);
             string totalsString = String.Empty;
             List<string> ties = new List<string>();
-            foreach (KeyValuePair<string, int> vote in voteTotals)
+            foreach (KeyValuePair<string, int> currentVotee in voteTotals)
             {
-                string nick = vote.Key;
+                string nick = currentVotee.Key;
+                int votes = currentVotee.Value;
+                int lastWinnerVotes = winner.Value;
 
-                if (vote.Value > 0)
+                if (votes > 0)
                 {
-                    if (winner.Key != String.Empty && winner.Value != -1) // if winner is not null
+                    if (winner.Key != String.Empty && winner.Value != -1) // if winner is not default/basicly null since I can't make this null
                     {
-                        if (vote.Value > winner.Value)
+                        if (votes > lastWinnerVotes) 
                         {
-                            winner = vote;
+                            winner = currentVotee;
 
                             if (ties.Count != 0)
                             {
-                                Console.WriteLine("Ties cleared. New winner: " + vote.Key + " for " + vote.Value + " votes.");
+                                Console.WriteLine("Ties cleared. New winner: " + nick + " for " + votes + " votes.");
                                 ties.Clear();
                             }
                         }
-
-                        else if (vote.Value == winner.Value)
+                        else if (votes == lastWinnerVotes)
                         {
-                            ties.Add(vote.Key);
+                            ties.Add(nick);
                             Console.WriteLine("Tie added, between last winner and this vote");
-                            Console.WriteLine("Tied for score: " + winner.Value);
+                            Console.WriteLine("Tied for score: " + votes);
                             foreach (string tie in ties)
                             {
                                 Console.WriteLine("Tie name: " + tie);
@@ -182,13 +202,10 @@ namespace nullbot.Modules
                         }
                     }
                     else
-                    {
-                        winner = vote;
-                    }
-                    
+                        winner = currentVotee;
                 }
 
-                totalsString = nick + " with " + vote.Value + " votes. [Lifetime score: ";
+                totalsString = nick + " with " + currentVotee.Value + " votes. [Lifetime score: ";
                 if (globals.lifetimePoints.ContainsKey(nick))
                     totalsString += globals.lifetimePoints[nick];
                 else
@@ -203,13 +220,22 @@ namespace nullbot.Modules
             {
                 string tieString = "A tie between: ";
 
-                tieString += String.Join(", ", ties);
+                tieString += String.Join(", ", ties.GetEnumerator());
 
                 client.SendMessage(SendType.Message, "#cooking", tieString);
+
+                client.SendMessage(SendType.Message, "#cooking", "Their acronyms were:");
+                AcronymProposal proposal;
+                for (int i = 0; i < ties.Count; i++)
+                {
+                    proposal = findProposalByName(ties[i]);
+                    client.SendMessage(SendType.Message, "#cooking", "[" + proposal.nickname + "] " + proposal.acronym);
+                }
             }
             else
             {
                 client.SendMessage(SendType.Message, "#cooking", "We have a winner: " + winner.Key + "!");
+                client.SendMessage(SendType.Message, "#cooking", "Their acronym was: " + findProposalByName(winner.Key).acronym);
             }
 
             votingTime = false;
@@ -220,6 +246,9 @@ namespace nullbot.Modules
 
         private void generateNewAcronym()
         {
+            if (customAcronym)
+                return;
+
             currentAcronym = String.Empty;
             
             int length = random.Next(minLength, maxLength);
@@ -253,8 +282,10 @@ namespace nullbot.Modules
                 if (gameTime)
                 {
                     AcronymProposal existingProposal = findProposalByName(nick);
+                    
+                    message = message.TrimStart(space).TrimEnd(space);
 
-                    string[] words = message.TrimStart(space).TrimEnd(space).Split(space);
+                    string[] words = message.Split(space);
                     int length = words.Length;
                     int expectedLength = currentAcronym.Length;
                     Console.WriteLine("Received new acronym from " + nick);
