@@ -12,7 +12,7 @@ namespace nullbot.Modules
     {
         private const int MIN_LENGTH_DEFAULT = 5;
         private const int MAX_LENGTH_DEFAULT = 8;
-        private const double GAME_LENGTH_MINUTES = 0.5;
+        private const double GAME_LENGTH_MINUTES = 2;
         private const double VOTE_LENGTH_MINUTES = 0.5;
         private const string LETTERS = "abcdefghijklmnoprstuvwy";
 
@@ -96,7 +96,7 @@ namespace nullbot.Modules
                                     break;
                                 }
                             }
-                            currentAcronym = commands[1];
+                            currentAcronym = commands[1].ToLower();
                         }
                     }
                 }
@@ -113,7 +113,7 @@ namespace nullbot.Modules
         private void newGame()
         {
             generateNewAcronym();
-            client.SendMessage(SendType.Message, "#cooking", "New acronym: " + currentAcronym + ". /msg " + client.Nickname + " [acronym]. Results voted on in 30 seconds if 2+ entries.");
+            client.SendMessage(SendType.Message, "#cooking", "New acronym: " + currentAcronym + ". /msg " + client.Nickname + " [acronym]. Results voted on in 2 minutes if 2+ entries.");
             Console.WriteLine("Generated new acronym: " + currentAcronym);
             gameTime = true;
             startTime = DateTime.Now;
@@ -153,7 +153,7 @@ namespace nullbot.Modules
                 }
 
                 client.SendMessage(SendType.Message, "#cooking", "Listing over. Time to vote!");
-                client.SendMessage(SendType.Message, "#cooking", "/msg " + client.Nickname + " !x to vote for which number.");
+                client.SendMessage(SendType.Message, "#cooking", "/msg " + client.Nickname + " !x to vote for which number. Vote lasts 30 seconds.");
 
                 votingTime = true;
                 voteTimer.Start();
@@ -192,6 +192,10 @@ namespace nullbot.Modules
                         else if (votes == lastWinnerVotes)
                         {
                             ties.Add(nick);
+                            
+                            if(ties.Count == 0)
+                                ties.Add(winner.Key);
+
                             Console.WriteLine("Tie added, between last winner and this vote");
                             Console.WriteLine("Tied for score: " + votes);
                             foreach (string tie in ties)
@@ -220,7 +224,7 @@ namespace nullbot.Modules
             {
                 string tieString = "A tie between: ";
 
-                tieString += String.Join(", ", ties.GetEnumerator());
+                tieString += String.Join(", ", ties);
 
                 client.SendMessage(SendType.Message, "#cooking", tieString);
 
@@ -284,6 +288,7 @@ namespace nullbot.Modules
                     AcronymProposal existingProposal = findProposalByName(nick);
                     
                     message = message.TrimStart(space).TrimEnd(space);
+                    message = message.Replace("  ", " ");
 
                     string[] words = message.Split(space);
                     int length = words.Length;
