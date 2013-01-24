@@ -8,7 +8,6 @@ namespace nullbot.Modules
 {
     class KarmaModule : ClientModule
     {
-        public Dictionary<string, int> karmaDatabase;
         
         public KarmaModule()
             : base("Karma") 

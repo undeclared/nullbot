@@ -51,7 +51,7 @@ namespace nullbot
             new Client();
             new AcronymGame();
             instance.Listen();
-            Globals.getInstance().Save();
+            GlobalStorage.getInstance().Save();
             Console.WriteLine("Press any key to continue");
             Console.ReadKey(true);
         }

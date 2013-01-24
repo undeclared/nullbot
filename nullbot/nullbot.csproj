@@ -65,10 +65,11 @@
   <ItemGroup>
     <Compile Include="Modules\AcronymGame\AcronymProposal.cs" />
     <Compile Include="Modules\ClientModule.cs" />
-    <Compile Include="Globals.cs" />
+    <Compile Include="GlobalStorage.cs" />
     <Compile Include="Modules\AcronymGame\AcronymGame.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Modules\KarmaModule.cs" />
+    <Compile Include="Modules\QuoteModule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -91,9 +92,7 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Modules\Quotes\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -19,7 +19,6 @@ namespace nullbot.Modules
         private bool customAcronym;
         private bool gameTime;
         private bool votingTime;
-        private IrcClient client;
         private Timer gameTimer;
         private Timer voteTimer;
         private string currentAcronym;
@@ -36,7 +35,6 @@ namespace nullbot.Modules
             gameTime = false;
             votingTime = false;
             customAcronym = false;
-            client = Client.getInstance();
             random = new Random();
             gameTimer = new Timer(GAME_LENGTH_MINUTES * 60 * 1000);
             gameTimer.Elapsed += startVote;
@@ -54,7 +52,7 @@ namespace nullbot.Modules
 
         void client_OnChannelMessage(object sender, IrcEventArgs e)
         {
-            Globals globals = Globals.getInstance();
+            GlobalStorage globals = GlobalStorage.getInstance();
             string message = e.Data.Message;
             string nick = e.Data.Nick;
 
@@ -165,7 +163,7 @@ namespace nullbot.Modules
             voteTimer.Stop();
             client.SendMessage(SendType.Message, "#cooking", "Voting is over.  The results are in:");
 
-            Globals globals = Globals.getInstance();
+            GlobalStorage globals = GlobalStorage.getInstance();
             KeyValuePair<string, int> winner = new KeyValuePair<string,int>(String.Empty, -1);
             string totalsString = String.Empty;
             List<string> ties = new List<string>();
@@ -279,7 +277,7 @@ namespace nullbot.Modules
             char space = ' ';
             string nick = e.Data.Nick;
             string message = e.Data.Message;
-            Globals globals = Globals.getInstance();
+            GlobalStorage globals = GlobalStorage.getInstance();
             if (!globals.IgnoredUsers.Contains(nick))
             {
                 if (gameTime)
