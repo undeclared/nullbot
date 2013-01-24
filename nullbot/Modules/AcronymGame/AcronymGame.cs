@@ -13,8 +13,8 @@ namespace nullbot.Modules
         private const int MIN_LENGTH_DEFAULT = 5;
         private const int MAX_LENGTH_DEFAULT = 8;
         private const double GAME_LENGTH_MINUTES = 2;
-        private const double VOTE_LENGTH_MINUTES = 0.5;
-        private const string LETTERS = "abcdefghijklmnoprstuvwy";
+        private const double VOTE_LENGTH_MINUTES = 1;
+        private const string LETTERS = "abcdefghijlmnoprstuvwy";
 
         private bool customAcronym;
         private bool gameTime;
@@ -181,21 +181,21 @@ namespace nullbot.Modules
                     {
                         if (votes > lastWinnerVotes) 
                         {
-                            winner = currentVotee;
+                            winner = currentVotee; // the new winner is this guy, because the last guy had less points
 
-                            if (ties.Count != 0)
+                            if (ties.Count != 0) // if there's ties, there is no more anymore
                             {
                                 Console.WriteLine("Ties cleared. New winner: " + nick + " for " + votes + " votes.");
                                 ties.Clear();
                             }
                         }
-                        else if (votes == lastWinnerVotes)
+                        else if (votes == lastWinnerVotes) // the last winner had the same score as this guy
                         {
-                            ties.Add(nick);
-                            
-                            if(ties.Count == 0)
+                            if (ties.Count == 0) // lets add the previous winner to ties, too.. 
                                 ties.Add(winner.Key);
 
+                            ties.Add(nick); // lets add this guy to ties then
+                            
                             Console.WriteLine("Tie added, between last winner and this vote");
                             Console.WriteLine("Tied for score: " + votes);
                             foreach (string tie in ties)
@@ -210,12 +210,15 @@ namespace nullbot.Modules
                 }
 
                 totalsString = nick + " with " + currentVotee.Value + " votes. [Lifetime score: ";
+                
                 if (globals.lifetimePoints.ContainsKey(nick))
                     totalsString += globals.lifetimePoints[nick];
                 else
                     totalsString += "0";
 
                 totalsString += " points.]";
+
+                totalsString += " [" + findProposalByName(nick).acronym + "]";
 
                 client.SendMessage(SendType.Message, "#cooking", totalsString);
             }
@@ -227,14 +230,10 @@ namespace nullbot.Modules
                 tieString += String.Join(", ", ties);
 
                 client.SendMessage(SendType.Message, "#cooking", tieString);
-
-                client.SendMessage(SendType.Message, "#cooking", "Their acronyms were:");
-                AcronymProposal proposal;
-                for (int i = 0; i < ties.Count; i++)
-                {
-                    proposal = findProposalByName(ties[i]);
-                    client.SendMessage(SendType.Message, "#cooking", "[" + proposal.nickname + "] " + proposal.acronym);
-                }
+            }
+            else if (winner.Key == String.Empty)
+            {
+                client.SendMessage(SendType.Message, "#cooking", "Assholes! Nobody voted.");
             }
             else
             {
@@ -313,7 +312,7 @@ namespace nullbot.Modules
                             index++;
 
                             char firstLetter = Char.ToLower(word[0]);
-                            if (firstLetter == '\"' || firstLetter == '\'')
+                            if (firstLetter == '\"' || firstLetter == '\'' || firstLetter == '(')
                                 firstLetter = Char.ToLower(word[1]);
 
                             char expectedLetter = currentAcronym[index];

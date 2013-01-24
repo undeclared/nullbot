@@ -37,7 +37,7 @@ namespace nullbot
             return instance;
         }
 
-        ~Globals()
+        public void Save()
         {
             XmlSerializer serializer = new XmlSerializer(typeof(Globals));
             StreamWriter file = new StreamWriter(@"globals.xml");
