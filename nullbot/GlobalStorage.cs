@@ -8,13 +8,16 @@ using System.IO;
 
 namespace nullbot
 {
-    [Serializable]
-    class GlobalStorage
+    [Serializable()]
+    public class GlobalStorage
     {
         public List<string> IgnoredUsers;
-        public Dictionary<string, int> lifetimePoints;
-        public Dictionary<string, int> karmaDatabase;
+        public SerializableDictionary<string, int> lifetimePoints;
+        public SerializableDictionary<string, int> karmaDatabase;
         public List<string> quotes;
+
+        private static XmlSerializer serializer;
+        private StreamWriter file;
 
         private static GlobalStorage instance;
 
@@ -24,27 +27,37 @@ namespace nullbot
             {
                 if (File.Exists("globals.xml"))
                 {
-                    XmlSerializer serializer = new XmlSerializer(typeof(GlobalStorage));
+                    serializer = new XmlSerializer(typeof(GlobalStorage));
                     StreamReader file = new StreamReader(@"globals.xml");
                     instance = (GlobalStorage)serializer.Deserialize(file);
+                    file.Close();
                 }
                 else
                 {
                     instance = new GlobalStorage();
                     instance.IgnoredUsers = new List<string>();
-                    instance.lifetimePoints = new Dictionary<string, int>();
+                    instance.lifetimePoints = new SerializableDictionary<string, int>();
                     instance.quotes = new List<string>();
+                    instance.karmaDatabase = new SerializableDictionary<string, int>();
                 }
             }
 
             return instance;
         }
+        
+        private GlobalStorage() { }
 
         public void Save()
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(GlobalStorage));
-            StreamWriter file = new StreamWriter(@"globals.xml");
-            serializer.Serialize(file, this);
+            Log.getInstance().DebugMessage("Saving global storage to globals.xml!");
+            file = new StreamWriter(@"globals.xml");
+            serializer.Serialize(file, instance);
+            file.Close();
+        }
+
+        public void Close()
+        {
+            file.Close();
         }
     }
 }

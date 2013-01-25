@@ -25,8 +25,8 @@ namespace nullbot.Modules
         private Random random;
         private DateTime startTime;
         private List<AcronymProposal> proposedAcronyms;
-        private Dictionary<string, int> peopleWhoVotedAndForWho;
-        private Dictionary<string, int> voteTotals;
+        private SerializableDictionary<string, int> peopleWhoVotedAndForWho;
+        private SerializableDictionary<string, int> voteTotals;
         private int minLength;
         private int maxLength;
 
@@ -41,8 +41,8 @@ namespace nullbot.Modules
             voteTimer = new Timer(VOTE_LENGTH_MINUTES * 60 * 1000);
             voteTimer.Elapsed += endGame;
             proposedAcronyms = new List<AcronymProposal>();
-            peopleWhoVotedAndForWho = new Dictionary<string, int>();
-            voteTotals = new Dictionary<string, int>();
+            peopleWhoVotedAndForWho = new SerializableDictionary<string, int>();
+            voteTotals = new SerializableDictionary<string, int>();
             client.OnQueryMessage += client_OnQueryMessage;
             client.OnChannelMessage += client_OnChannelMessage;
 
@@ -52,12 +52,11 @@ namespace nullbot.Modules
 
         void client_OnChannelMessage(object sender, IrcEventArgs e)
         {
-            GlobalStorage globals = GlobalStorage.getInstance();
             string message = e.Data.Message;
             string nick = e.Data.Nick;
 
             if (message.StartsWith("!acronym") &&
-                !globals.IgnoredUsers.Contains(nick) &&
+                !globalStorage.IgnoredUsers.Contains(nick) &&
                 !gameTime &&
                 !votingTime)
             {
@@ -91,7 +90,8 @@ namespace nullbot.Modules
                                 if (!Char.IsLetter(ch))
                                 {
                                     customAcronym = false;
-                                    break;
+                                    client.SendMessage(SendType.Message, e.Data.Channel, "Invalid letters detected! Fix it.");
+                                    return;
                                 }
                             }
                             currentAcronym = commands[1].ToLower();
@@ -112,7 +112,7 @@ namespace nullbot.Modules
         {
             generateNewAcronym();
             client.SendMessage(SendType.Message, "#cooking", "New acronym: " + currentAcronym + ". /msg " + client.Nickname + " [acronym]. Results voted on in 2 minutes if 2+ entries.");
-            Console.WriteLine("Generated new acronym: " + currentAcronym);
+            log.VerboseMessage("Generated new acronym: " + currentAcronym);
             gameTime = true;
             startTime = DateTime.Now;
             gameTimer.Start();
@@ -151,7 +151,7 @@ namespace nullbot.Modules
                 }
 
                 client.SendMessage(SendType.Message, "#cooking", "Listing over. Time to vote!");
-                client.SendMessage(SendType.Message, "#cooking", "/msg " + client.Nickname + " !x to vote for which number. Vote lasts 30 seconds.");
+                client.SendMessage(SendType.Message, "#cooking", "/msg " + client.Nickname + " !x to vote for which number. Vote lasts 1 minute.");
 
                 votingTime = true;
                 voteTimer.Start();
@@ -183,7 +183,7 @@ namespace nullbot.Modules
 
                             if (ties.Count != 0) // if there's ties, there is no more anymore
                             {
-                                Console.WriteLine("Ties cleared. New winner: " + nick + " for " + votes + " votes.");
+                                log.VerboseMessage("Ties cleared. New winner: " + nick + " for " + votes + " votes.");
                                 ties.Clear();
                             }
                         }
@@ -194,13 +194,13 @@ namespace nullbot.Modules
 
                             ties.Add(nick); // lets add this guy to ties then
                             
-                            Console.WriteLine("Tie added, between last winner and this vote");
-                            Console.WriteLine("Tied for score: " + votes);
+                            log.VerboseMessage("Tie added, between last winner and this vote");
+                            log.VerboseMessage("Tied for score: " + votes);
                             foreach (string tie in ties)
                             {
-                                Console.WriteLine("Tie name: " + tie);
+                                log.VerboseMessage("Tie name: " + tie);
                             }
-                            Console.WriteLine("Total ties: " + ties.Count);
+                            log.VerboseMessage("Total ties: " + ties.Count);
                         }
                     }
                     else
@@ -234,10 +234,7 @@ namespace nullbot.Modules
                 client.SendMessage(SendType.Message, "#cooking", "Assholes! Nobody voted.");
             }
             else
-            {
                 client.SendMessage(SendType.Message, "#cooking", "We have a winner: " + winner.Key + "!");
-                client.SendMessage(SendType.Message, "#cooking", "Their acronym was: " + findProposalByName(winner.Key).acronym);
-            }
 
             votingTime = false;
             proposedAcronyms.Clear();
@@ -290,11 +287,11 @@ namespace nullbot.Modules
                     string[] words = message.Split(space);
                     int length = words.Length;
                     int expectedLength = currentAcronym.Length;
-                    Console.WriteLine("Received new acronym from " + nick);
+                    log.VerboseMessage("Received new acronym from " + nick);
 
                     if (length != expectedLength)
                     {
-                        Console.WriteLine("Acronym not the right length.");
+                        log.VerboseMessage("Acronym not the right length.");
                         client.SendMessage(SendType.Message, nick, "There is something wrong with the acronym you sent.  Expected " + expectedLength + " words.  You sent " + length + " word(s).");
 
                         if (existingProposal != null)
@@ -317,7 +314,7 @@ namespace nullbot.Modules
 
                             if (firstLetter != expectedLetter)
                             {
-                                Console.WriteLine("Acronym has mismatched letters.");
+                                log.VerboseMessage("Acronym has mismatched letters.");
                                 client.SendMessage(SendType.Message, nick, "There is something wrong with the acronym you sent (mismatched letters). Please verify and re-send.");
 
                                 if (existingProposal != null)
@@ -334,12 +331,12 @@ namespace nullbot.Modules
                     if (timeSpan.Minutes > 0)
                         timeString = timeSpan.Minutes.ToString() + " minute " + timeString;
 
-                    Console.WriteLine("Received at: " + timeString);
+                    log.VerboseMessage("Received at: " + timeString);
 
                     AcronymProposal acronymProposal;
                     if (existingProposal != null)
                     {
-                        Console.WriteLine("Removing existing one.");
+                        log.VerboseMessage("Removing existing one.");
                         client.SendMessage(SendType.Message, nick, "New acronym received. Replacing old one.");
                         existingProposal.timeSpanString = timeString;
                         existingProposal.acronym = message;
@@ -371,23 +368,23 @@ namespace nullbot.Modules
 
                             if (peopleWhoVotedAndForWho.ContainsKey(nick))
                             {
-                                Console.WriteLine(nick + " already voted (" + peopleWhoVotedAndForWho[nick] + ")");
+                                log.DebugMessage(nick + " already voted (" + peopleWhoVotedAndForWho[nick] + ")");
 
                                 int oldVote = peopleWhoVotedAndForWho[nick];
                                 if (oldVote != vote)
                                 {
                                     client.SendMessage(SendType.Message, nick, "New vote received.  Old one removed.");
                                     string nickOfProposerOld = proposedAcronyms[oldVote].nickname;
-                                    Console.WriteLine(nick + "'s old vote was for " + nickOfProposerOld + ".  Getting rid of vote totals and Lifetime pointss");
+                                    log.DebugMessage(nick + "'s old vote was for " + nickOfProposerOld + ".  Getting rid of vote totals and Lifetime pointss");
 
-                                    Console.WriteLine("Lifetime points for " + nickOfProposerOld + " before: " + globals.lifetimePoints[nickOfProposerOld]);
-                                    Console.WriteLine("Voting score for " + nickOfProposerOld + " before: " + voteTotals[nickOfProposerOld]);
+                                    log.DebugMessage("Lifetime points for " + nickOfProposerOld + " before: " + globals.lifetimePoints[nickOfProposerOld]);
+                                    log.DebugMessage("Voting score for " + nickOfProposerOld + " before: " + voteTotals[nickOfProposerOld]);
 
                                     globals.lifetimePoints[nickOfProposerOld]--;
                                     voteTotals[nickOfProposerOld]--;
 
-                                    Console.WriteLine("Lifetime points for " + nickOfProposerOld + " after: " + globals.lifetimePoints[nickOfProposerOld]);
-                                    Console.WriteLine("Voting score for " + nickOfProposerOld + " after: " + voteTotals[nickOfProposerOld]);
+                                    log.DebugMessage("Lifetime points for " + nickOfProposerOld + " after: " + globals.lifetimePoints[nickOfProposerOld]);
+                                    log.DebugMessage("Voting score for " + nickOfProposerOld + " after: " + voteTotals[nickOfProposerOld]);
                                 }
                                 else
                                 {
@@ -401,35 +398,35 @@ namespace nullbot.Modules
 
                             peopleWhoVotedAndForWho[nick] = vote;
                             string nickOfProposer = proposedAcronyms[vote].nickname;
-                            Console.WriteLine(nick + " is voting for " + nickOfProposer + " [#" + (vote + 1) + "]");
+                            log.VerboseMessage(nick + " is voting for " + nickOfProposer + " [#" + (vote + 1) + "]");
 
                             bool hasOverallScore = globals.lifetimePoints.ContainsKey(nickOfProposer);
                             bool hasVotes = voteTotals.ContainsKey(nickOfProposer);
 
                             if (hasOverallScore)
                             {
-                                Console.WriteLine("Lifetime points: " +
+                                log.DebugMessage("Lifetime points: " +
                                                   globals.lifetimePoints[nickOfProposer] +
-                                                  " + 1 = " +
+                                                  " => " +
                                                   ++globals.lifetimePoints[nickOfProposer]);
                             }
                             else
                             {
-                                Console.WriteLine("Lifetime points: 0 + 1 = 1");
+                                log.DebugMessage("Lifetime points: 0 => 1");
                                 globals.lifetimePoints[nickOfProposer] = 1;
                             }
 
                             if (hasVotes)
                             {
-                                Console.WriteLine("Votes: " +
+                                log.DebugMessage("Votes: " +
                                                   voteTotals[nickOfProposer] +
-                                                  " + 1 = " +
+                                                  " => " +
                                                   ++voteTotals[nickOfProposer]);
 
                             }
                             else
                             {
-                                Console.WriteLine("Votes: 0 + 1 = 1");
+                                log.DebugMessage("Votes: 0 => 1");
                                 voteTotals[nickOfProposer] = 1;
                             }
                         }

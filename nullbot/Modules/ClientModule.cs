@@ -25,6 +25,7 @@ namespace nullbot
 
         protected IrcClient client;
         protected GlobalStorage globalStorage;
+        protected Log log;
         
         public ClientModule(string name)
         {
@@ -32,6 +33,7 @@ namespace nullbot
             this.enabled = true;
             this.client = Client.getInstance();
             this.globalStorage = GlobalStorage.getInstance();
+            this.log = Log.getInstance();
         }
     }
 }

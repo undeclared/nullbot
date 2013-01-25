@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 using Meebey.SmartIrc4net;
 using nullbot.Modules;
 
@@ -32,7 +33,15 @@ namespace nullbot
             instance.OnRegistered += clientInstance_OnRegistered;
             
             instance.Connect(Server, Port);
-   
+
+            Timer timer = new Timer(15 * 1000);
+            timer.Elapsed += saveGlobalStorage;
+            timer.Start();
+        }
+
+        void saveGlobalStorage(object sender, ElapsedEventArgs e)
+        {
+            GlobalStorage.getInstance().Save();
         }
 
 
@@ -50,10 +59,10 @@ namespace nullbot
         {
             new Client();
             new AcronymGame();
+            new KarmaModule();
+            new QuoteModule();
+
             instance.Listen();
-            GlobalStorage.getInstance().Save();
-            Console.WriteLine("Press any key to continue");
-            Console.ReadKey(true);
         }
     }
 }
