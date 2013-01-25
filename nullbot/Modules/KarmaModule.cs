@@ -59,7 +59,26 @@ namespace nullbot.Modules
 
             if (!globalStorage.IgnoredUsers.Contains(nick))
             {
-                if (message.EndsWith("++"))
+                if (message.StartsWith(activator))
+                {
+                    if (!message.Equals(activator))
+                    {
+                        string karmaOf = message.Substring(activator.Length + 1); // the activator plus a space
+                        log.VerboseMessage(nick + " asking for karma of " + karmaOf + " in " + channel);
+                        if (globalStorage.karmaDatabase.ContainsKey(karmaOf))
+                        {
+                            int karma = globalStorage.karmaDatabase[karmaOf];
+                            client.SendMessage(SendType.Message, channel, karmaOf + " has a karma of " + karma);
+                            log.DebugMessage("It has a karma of " + karma);
+                        }
+                        else
+                        {
+                            client.SendMessage(SendType.Message, channel, karmaOf + " has karma of 0.");
+                            log.DebugMessage("It has a karma of 0");
+                        }
+                    }
+                }
+                else if (message.EndsWith("++"))
                 {
                     string karmaOf = message.Substring(0, message.Length - 2);
                     if (globalStorage.karmaDatabase.ContainsKey(karmaOf))
@@ -81,29 +100,7 @@ namespace nullbot.Modules
                     log.VerboseMessage(nick + " => -- => " + karmaOf);
                     log.DebugMessage("New karma is: " + globalStorage.karmaDatabase[karmaOf]);
                 }
-                else if (message.StartsWith(activator))
-                {
-                    if (!message.Equals(activator))
-                    {
-                        string karmaOf = message.Substring(activator.Length + 1); // the activator plus a space
-                        log.VerboseMessage(nick + " asking for karma of " + karmaOf + " in " + channel);
-                        if (globalStorage.karmaDatabase.ContainsKey(karmaOf))
-                        {
-                            int karma = globalStorage.karmaDatabase[karmaOf];
-                            client.SendMessage(SendType.Message, channel, karmaOf + " has a karma of " + karma);
-                            log.DebugMessage("It has a karma of " + karma);
-                        }
-                        else
-                        {
-                            client.SendMessage(SendType.Message, channel, karmaOf + " has karma of 0.");
-                            log.DebugMessage("It has a karma of 0");
-                        }
-                    }
-                }
             }
         }
-
-        
-        
     }
 }
